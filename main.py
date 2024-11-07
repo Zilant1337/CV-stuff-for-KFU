@@ -14,16 +14,18 @@ plt.imshow(a)
 plt.show()
 
 # Inverting colour
-invert_tensor = np.full(a.shape,255)
-a= invert_tensor-a
-plt.imshow(a)
-plt.show()
+# invert_tensor = np.full(a.shape,255)
+# a= invert_tensor-a
+# plt.imshow(a)
+# plt.show()
 
 # Greyscaling the image
-grey_a = np.full((a.shape[0],a.shape[1]),0)
+grey_a = np.full((a.shape[0],a.shape[1]),0, dtype=np.float64)
 for i in range (3):
-    grey_a+= a[:,:,i]*ntsc_values[i]
+    grey_a+= np.multiply(a[:,:,i],ntsc_values[i])
 
 plt.imshow(grey_a,cmap='gray')
 plt.show()
+
+
 
