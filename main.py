@@ -3,6 +3,8 @@ import numpy as np
 import PIL
 from matplotlib import pyplot as plt
 
+ntsc_values = [0.299, 0.587, 0.114]
+
 a = np.array(0)
 
 # Импорт в массив
@@ -17,4 +19,11 @@ a= invert_tensor-a
 plt.imshow(a)
 plt.show()
 
-# Grayscaling the image
+# Greyscaling the image
+grey_a = np.full((a.shape[0],a.shape[1]),0)
+for i in range (3):
+    grey_a+= a[:,:,i]*ntsc_values[i]
+
+plt.imshow(grey_a,cmap='gray')
+plt.show()
+
