@@ -82,5 +82,19 @@ plt.show()
 # Equalizing the histogram
 total_img_pixel_count = a.shape[0]*a.shape[1]
 
-p = [x/total_img_pixel_count for x in hist[0]]
 
+def cdf(list,i):
+    return np.sum(list[:i])
+
+cdf_min = cdf(hist[0],0)
+
+for x in range(len(gaussian_blur_a)):
+    for y in range(len(gaussian_blur_a[0])):
+        gaussian_blur_a[x,y] = round((cdf(hist[0],round(gaussian_blur_a[x,y]))-cdf_min)/(total_img_pixel_count-1)*255)
+
+plt.imshow(gaussian_blur_a,cmap='gray')
+plt.show()
+
+hist = np.histogram(gaussian_blur_a,bins=range(0,255))
+plt.bar(x=hist[1][1:], height = hist[0])
+plt.show()
