@@ -4,6 +4,9 @@ import numpy as np
 import PIL
 from matplotlib import pyplot as plt
 
+print("Please input the step for histogram method:")
+hist_step = int(input())
+
 ntsc_values = [0.299, 0.587, 0.114]
 # print("Please input the size of the kernel:")
 # kernel_size_input = int(input())
@@ -98,7 +101,7 @@ ntsc_values = [0.299, 0.587, 0.114]
 # plt.bar(x=hist[1][1:], height = hist[0])
 # plt.show()
 
-# Otsu binarization
+
 b = np.array(0)
 c = np.array(0)
 with PIL.Image.open("tarkov2.jpeg") as img:
@@ -116,6 +119,7 @@ plt.show()
 plt.imshow(grey_c, cmap = "grey")
 plt.show()
 
+# Binarization method
 def otsu_threshold(img):
     histogram = np.histogram(img,bins = range(0,257))
     total_pixels = len(img)*len(img[0])
@@ -188,7 +192,6 @@ plt.show()
 plt.imshow(clear_c, cmap = "grey")
 plt.show()
 
-# Grouping
 def get_groups(binary_image):
     assert set(np.unique(binary_image)).issubset({0, 255}), "The input image must be binary (0 and 255 only)."
 
@@ -215,7 +218,6 @@ def get_groups(binary_image):
                         stack.append((nx, ny))
         return group
 
-    # Traverse all white pixels
     for coord in white_pixel_coords:
         x, y = coord
         if not visited[x, y]:
@@ -224,12 +226,12 @@ def get_groups(binary_image):
 
     return groups
 groups_b = get_groups(binary_b)
-groups_img_b = np.full(b.shape,0, dtype=np.int32)
+groups_img_b = np.full((b.shape[0],b.shape[1],3),0, dtype=np.int32)
 groups_c = get_groups(binary_c)
 groups_img_c = np.full(c.shape,0, dtype=np.int32)
 
 for group in groups_b:
-    color = list(np.random.choice(range(0,255), size=3))
+    color = list(np.random.choice(range(256), size=3))
     print(color)
     for i in color:
         i = int(i)
@@ -244,4 +246,61 @@ for group in groups_c:
 plt.imshow(groups_img_b)
 plt.show()
 plt.imshow(groups_img_c)
+plt.show()
+
+# Histogram method
+def get_local_minima_in_hist(img, step):
+    histogram = np.histogram(img, bins=range(0, 256))
+    thresholds = [0]
+    for i in range(0,255,step):
+        start = 0
+        if i-step>0:
+            start = i-step
+        end = 255
+        if i+step<255:
+            end = i+step
+        local_min = float('inf')
+        min_id = 256
+        for j in range (start,end):
+            if(histogram[0][j]<local_min):
+                local_min = histogram[0][j]
+                min_id = j
+        thresholds.append(min_id)
+    return thresholds
+
+
+b_thresholds = get_local_minima_in_hist(grey_b,hist_step)
+c_thresholds = get_local_minima_in_hist(grey_c,hist_step)
+
+def get_groups_by_hist(img, thresholds):
+    groups = []
+    for threshold in thresholds:
+        groups.append([])
+    for x in range(img.shape[0]):
+        for y in range(img.shape[1]):
+            for i in range(len(thresholds) - 1):
+                if img[x,y]>thresholds[i] and img[x,y]<=thresholds[i+1]:
+                    groups[i].append((x,y))
+    return groups
+
+groups_hist_b = get_groups_by_hist(grey_b,b_thresholds)
+groups_hist_img_b =np.full((b.shape[0],b.shape[1],3),0, dtype=np.int32)
+for group in groups_hist_b:
+    color = list(np.random.choice(range(256), size=3))
+    for i in color:
+        i = int(i)
+    for coordinates in group:
+        groups_hist_img_b[coordinates[0],coordinates[1]] = color
+groups_hist_c = get_groups_by_hist(grey_c,c_thresholds)
+groups_hist_img_c =np.full((c.shape[0],c.shape[1],3),0, dtype=np.int32)
+for group in groups_hist_c:
+    color = list(np.random.choice(range(256), size=3))
+    for i in color:
+        i = int(i)
+    for coordinates in group:
+        groups_hist_img_c[coordinates[0],coordinates[1]] = color
+
+plt.imshow(groups_hist_img_b)
+plt.show()
+plt.imshow(groups_hist_img_c)
 plt.show()
