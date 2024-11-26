@@ -176,10 +176,8 @@ def salt_and_pepper(img):
     for x in range(len(img)):
         for y in range(len(img[0])):
             if(bordered_img[x:x+3,y:y+3]== salt).all():
-                print(bordered_img[x:x+3,y:y+3],"\n")
                 return_img[x,y] =256
             if(bordered_img[x:x+3,y:y+3] == pepper).all():
-                print(bordered_img[x:x + 3, y:y + 3], "\n")
                 return_img[x,y] = 0
     return return_img
 
@@ -189,3 +187,28 @@ plt.imshow(clear_b, cmap = "grey")
 plt.show()
 plt.imshow(clear_c, cmap = "grey")
 plt.show()
+
+# Grouping
+def get_groups(img):
+    groups = []
+    for x in range(img.shape()[0]):
+        for y in range(img.shape()[1]):
+            is_in_group = False
+            for group in groups:
+                if (x,y) in group:
+                    is_in_group = True
+            if(is_in_group):
+                continue
+            else:
+                groups.append(get_group(img,(x,y)))
+
+
+def get_group(img,coords):
+    group = []
+    if img[coords[0], coords[1]] == 256:
+        group.append(coords)
+    coords_to_check = [(coords[0]-1,coords[1]),(coords[0]+1,coords[1]),(coords[0],coords[1]-1),(coords[0],coords[1]+1)]
+    for i in coords_to_check:
+        if(img[i[0],i[1]]!=0):
+            group+=get_group(img,(i[0],i[1]))
+    return group
