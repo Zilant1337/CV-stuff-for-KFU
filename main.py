@@ -154,7 +154,7 @@ def binarization(img,threshold):
             if(img[x,y]<threshold):
                 binary_img[x,y]=0
             else:
-                binary_img[x,y]=256
+                binary_img[x,y]=255
     return binary_img
 
 binary_b = binarization(grey_b,b_threshold)
@@ -171,12 +171,12 @@ def salt_and_pepper(img):
     bordered_shape = [x + 2 for x in img.shape]
     bordered_img = np.full(bordered_shape, 0)
     bordered_img[1:1 + img.shape[0], 1:1 + img.shape[1]] = img
-    salt = np.array([[256,256,256],[256,0,256],[256,256,256]])
-    pepper = np.array([[0, 0, 0], [0, 256, 0], [0, 0, 0]])
+    salt = np.array([[255,255,255],[255,0,255],[255,255,255]])
+    pepper = np.array([[0, 0, 0], [0, 255, 0], [0, 0, 0]])
     for x in range(len(img)):
         for y in range(len(img[0])):
             if(bordered_img[x:x+3,y:y+3]== salt).all():
-                return_img[x,y] =256
+                return_img[x,y] =255
             if(bordered_img[x:x+3,y:y+3] == pepper).all():
                 return_img[x,y] = 0
     return return_img
@@ -189,26 +189,59 @@ plt.imshow(clear_c, cmap = "grey")
 plt.show()
 
 # Grouping
-def get_groups(img):
+def get_groups(binary_image):
+    assert set(np.unique(binary_image)).issubset({0, 255}), "The input image must be binary (0 and 255 only)."
+
+    visited = np.zeros_like(binary_image, dtype=bool)
+    white_pixel_coords = np.argwhere(binary_image == 255)
+
     groups = []
-    for x in range(img.shape()[0]):
-        for y in range(img.shape()[1]):
-            is_in_group = False
-            for group in groups:
-                if (x,y) in group:
-                    is_in_group = True
-            if(is_in_group):
+
+    neighbor_offsets = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+
+    def flood_fill(start_coord):
+        group = []
+        stack = [start_coord]
+        while stack:
+            x, y = stack.pop()
+            if visited[x, y]:
                 continue
-            else:
-                groups.append(get_group(img,(x,y)))
+            visited[x, y] = True
+            group.append((x, y))
+            for dx, dy in neighbor_offsets:
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < binary_image.shape[0] and 0 <= ny < binary_image.shape[1]:
+                    if binary_image[nx, ny] == 255 and not visited[nx, ny]:
+                        stack.append((nx, ny))
+        return group
 
+    # Traverse all white pixels
+    for coord in white_pixel_coords:
+        x, y = coord
+        if not visited[x, y]:
+            group = flood_fill((x, y))
+            groups.append(group)
 
-def get_group(img,coords):
-    group = []
-    if img[coords[0], coords[1]] == 256:
-        group.append(coords)
-    coords_to_check = [(coords[0]-1,coords[1]),(coords[0]+1,coords[1]),(coords[0],coords[1]-1),(coords[0],coords[1]+1)]
-    for i in coords_to_check:
-        if(img[i[0],i[1]]!=0):
-            group+=get_group(img,(i[0],i[1]))
-    return group
+    return groups
+groups_b = get_groups(binary_b)
+groups_img_b = np.full(b.shape,0, dtype=np.int32)
+groups_c = get_groups(binary_c)
+groups_img_c = np.full(c.shape,0, dtype=np.int32)
+
+for group in groups_b:
+    color = list(np.random.choice(range(0,255), size=3))
+    print(color)
+    for i in color:
+        i = int(i)
+    for coordinates in group:
+        groups_img_b[coordinates[0],coordinates[1]] = color
+for group in groups_c:
+    color = list(np.random.choice(range(256), size=3))
+    print(color)
+    for coordinates in group:
+        groups_img_c[coordinates[0],coordinates[1]] = color
+
+plt.imshow(groups_img_b)
+plt.show()
+plt.imshow(groups_img_c)
+plt.show()
