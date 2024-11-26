@@ -5,20 +5,20 @@ import PIL
 from matplotlib import pyplot as plt
 
 ntsc_values = [0.299, 0.587, 0.114]
-print("Please input the size of the kernel:")
-kernel_size_input = int(input())
-print("Please input the gaussian standart deviation:")
-gaussian_standart_deviation = int(input())
-gaussian_kernel_size = kernel_size_input - (1 - kernel_size_input % 2)
-a = np.array(0)
-
-# Creating kernel
-kernel = np.zeros((gaussian_kernel_size,gaussian_kernel_size))
-for x in range(0, gaussian_kernel_size):
-    for y in range(0, gaussian_kernel_size):
-        x_from_center = gaussian_kernel_size//2+1-x
-        y_from_center = gaussian_kernel_size // 2 + 1 - y
-        kernel[x,y]=1/(2*math.pi*gaussian_standart_deviation**2)*math.exp(-1*(x_from_center**2+y_from_center**2)/(2*gaussian_standart_deviation**2))
+# print("Please input the size of the kernel:")
+# kernel_size_input = int(input())
+# print("Please input the gaussian standart deviation:")
+# gaussian_standart_deviation = int(input())
+# gaussian_kernel_size = kernel_size_input - (1 - kernel_size_input % 2)
+# a = np.array(0)
+#
+# # Creating kernel
+# kernel = np.zeros((gaussian_kernel_size,gaussian_kernel_size))
+# for x in range(0, gaussian_kernel_size):
+#     for y in range(0, gaussian_kernel_size):
+#         x_from_center = gaussian_kernel_size//2+1-x
+#         y_from_center = gaussian_kernel_size // 2 + 1 - y
+#         kernel[x,y]=1/(2*math.pi*gaussian_standart_deviation**2)*math.exp(-1*(x_from_center**2+y_from_center**2)/(2*gaussian_standart_deviation**2))
 
 
 # # Importing image into a list
@@ -101,7 +101,7 @@ for x in range(0, gaussian_kernel_size):
 # Otsu binarization
 b = np.array(0)
 c = np.array(0)
-with PIL.Image.open("tarkov.jpeg") as img:
+with PIL.Image.open("tarkov2.jpeg") as img:
     b = np.array(img)
 with PIL.Image.open("tarkov3.jpeg") as img:
     c = np.array(img)
@@ -128,13 +128,13 @@ def otsu_threshold(img):
     threshold = 0
 
     for t in range(1, 256):
-        w1 = cum_sum[t]
-        w2 = 1 - w1
+        q1 = cum_sum[t]
+        q2 = 1 - q1
 
-        mu1 = cumulative_mean[t] / w1 if w1 != 0 else 0
-        mu2 = (cumulative_mean[-1] - cumulative_mean[t]) / w2 if w2 != 0 else 0
+        mu1 = cumulative_mean[t] / q1 if q1 != 0 else 0
+        mu2 = (cumulative_mean[-1] - cumulative_mean[t]) / q2 if q2 != 0 else 0
 
-        variance_between = w1 * w2 * (mu1 - mu2) ** 2
+        variance_between = q1 * q2 * (mu1 - mu2) ** 2
 
         if variance_between > max_variance:
             max_variance = variance_between
@@ -147,20 +147,45 @@ c_threshold = otsu_threshold(grey_c)
 
 binary_b = np.full((b.shape[0],b.shape[1]),0, dtype=np.float64)
 binary_c = np.full((c.shape[0],c.shape[1]),0, dtype=np.float64)
-for x in range(len(b)):
-    for y in range(len (b[0])):
-        if(grey_b[x,y]<b_threshold):
-            binary_b[x,y]=0
-        else:
-            binary_b[x,y]=256
-for x in range(len(c)):
-    for y in range(len (c[0])):
-        if(grey_c[x,y]<c_threshold):
-            binary_c[x,y]=0
-        else:
-            binary_c[x,y]=256
+def binarization(img,threshold):
+    binary_img = np.full((img.shape[0],img.shape[1]),0, dtype=np.float64)
+    for x in range(len(img)):
+        for y in range(len (img[0])):
+            if(img[x,y]<threshold):
+                binary_img[x,y]=0
+            else:
+                binary_img[x,y]=256
+    return binary_img
 
+binary_b = binarization(grey_b,b_threshold)
+binary_c = binarization(grey_c,c_threshold)
 plt.imshow(binary_b, cmap = "grey")
 plt.show()
 plt.imshow(binary_c, cmap = "grey")
+plt.show()
+
+# Deleting salt and pepper
+
+def salt_and_pepper(img):
+    return_img = img
+    bordered_shape = [x + 2 for x in img.shape]
+    bordered_img = np.full(bordered_shape, 0)
+    bordered_img[1:1 + img.shape[0], 1:1 + img.shape[1]] = img
+    salt = np.array([[256,256,256],[256,0,256],[256,256,256]])
+    pepper = np.array([[0, 0, 0], [0, 256, 0], [0, 0, 0]])
+    for x in range(len(img)):
+        for y in range(len(img[0])):
+            if(bordered_img[x:x+3,y:y+3]== salt).all():
+                print(bordered_img[x:x+3,y:y+3],"\n")
+                return_img[x,y] =256
+            if(bordered_img[x:x+3,y:y+3] == pepper).all():
+                print(bordered_img[x:x + 3, y:y + 3], "\n")
+                return_img[x,y] = 0
+    return return_img
+
+clear_b = salt_and_pepper(binary_b)
+clear_c = salt_and_pepper(binary_c)
+plt.imshow(clear_b, cmap = "grey")
+plt.show()
+plt.imshow(clear_c, cmap = "grey")
 plt.show()
