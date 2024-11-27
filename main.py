@@ -250,7 +250,7 @@ plt.show()
 def get_local_minima_in_hist(img, step):
     histogram = np.histogram(img, bins=range(0, 256))
     thresholds = [0]
-    for i in range(0,255,step):
+    for i in range(0,255):
         start = 0
         if i-step>0:
             start = i-step
@@ -263,7 +263,8 @@ def get_local_minima_in_hist(img, step):
             if(histogram[0][j]<local_min):
                 local_min = histogram[0][j]
                 min_id = j
-        thresholds.append(min_id)
+        if(i==min_id):
+            thresholds.append(i)
     return thresholds
 
 
