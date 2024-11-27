@@ -230,17 +230,15 @@ groups_img_b = np.full((b.shape[0],b.shape[1],3),0, dtype=np.int32)
 groups_c = get_groups(binary_c)
 groups_img_c = np.full(c.shape,0, dtype=np.int32)
 
-for group in groups_b:
+for segment in groups_b:
     color = list(np.random.choice(range(256), size=3))
-    print(color)
     for i in color:
         i = int(i)
-    for coordinates in group:
+    for coordinates in segment:
         groups_img_b[coordinates[0],coordinates[1]] = color
-for group in groups_c:
+for segment in groups_c:
     color = list(np.random.choice(range(256), size=3))
-    print(color)
-    for coordinates in group:
+    for coordinates in segment:
         groups_img_c[coordinates[0],coordinates[1]] = color
 
 plt.imshow(groups_img_b)
@@ -303,4 +301,62 @@ for group in groups_hist_c:
 plt.imshow(groups_hist_img_b)
 plt.show()
 plt.imshow(groups_hist_img_c)
+plt.show()
+
+group_matrix_b = np.full((b.shape[0], b.shape[1]), 0, dtype=np.int32)
+for i in range(len(groups_hist_b)):
+    for pixels in groups_hist_b[i]:
+        group_matrix_b[pixels[0],pixels[1]]=i
+group_matrix_c = np.full((c.shape[0], c.shape[1]), 0, dtype=np.int32)
+for i in range(len(groups_hist_c)):
+    for pixels in groups_hist_c[i]:
+        group_matrix_c[pixels[0],pixels[1]]=i
+def get_segments(img,group_matrix):
+    segments = []
+    visited = np.zeros_like(img, dtype=bool)
+    neighbor_offsets = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+    def get_segment(start_coords, number):
+        segment = []
+        stack = [start_coords]
+        while stack:
+            x, y = stack.pop()
+            if visited[x, y]:
+                continue
+            visited[x, y] = True
+            segment.append((x, y))
+            for dx, dy in neighbor_offsets:
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < img.shape[0] and 0 <= ny < img.shape[1]:
+                    if number == group_matrix[nx,ny] and not visited[nx, ny]:
+                        stack.append((nx, ny))
+        return segment
+
+    for x in range(len(group_matrix)):
+        for y in range(len(group_matrix[0])):
+            if not visited[x,y]:
+                segment=get_segment((x,y),group_matrix[x,y])
+                segments.append(segment)
+    return segments
+
+segments_b = get_segments(grey_b, group_matrix_b)
+segments_img_b =np.full((b.shape[0],b.shape[1],3),0, dtype=np.int32)
+
+for segment in segments_b:
+    color = list(np.random.choice(range(256), size=3))
+    for i in color:
+        i = int(i)
+    for coordinates in segment:
+        segments_img_b[coordinates[0],coordinates[1]] = color
+plt.imshow(segments_img_b)
+plt.show()
+segments_c = get_segments(grey_c, group_matrix_c)
+segments_img_c =np.full((c.shape[0],c.shape[1],3),0, dtype=np.int32)
+
+for segment in segments_c:
+    color = list(np.random.choice(range(256), size=3))
+    for i in color:
+        i = int(i)
+    for coordinates in segment:
+        segments_img_c[coordinates[0],coordinates[1]] = color
+plt.imshow(segments_img_c)
 plt.show()
