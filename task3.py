@@ -22,7 +22,7 @@ for x in range(0, gaussian_kernel_size):
 
 
 # Importing image into a list
-with PIL.Image.open("tarkov3.jpeg") as img:
+with PIL.Image.open("helldiver.jpg") as img:
     a = np.array(img)
 plt.imshow(a)
 plt.show()
@@ -140,6 +140,9 @@ def border_specification(gradient, t_high, t_low):
     for coords in higher_than_high:
         if(visited_matrix[coords[0],coords[1]]==-1):
             recursive_neighbour_check(coords)
+    remaining = np.argwhere(visited_matrix == -1)
+    for coords in remaining:
+        visited_matrix[coords[0],coords[1]] = 0
     return visited_matrix
 
 specified_borders = border_specification(nms_grey_a,t_high,t_low)
