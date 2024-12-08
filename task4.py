@@ -22,7 +22,7 @@ for x in range(0, gaussian_kernel_size):
 
 
 # Importing image into a list
-with PIL.Image.open("lanes.jpg") as img:
+with PIL.Image.open("road2.jpg") as img:
     a = np.array(img)
 plt.imshow(a)
 plt.show()
@@ -34,6 +34,8 @@ for i in range (3):
 
 plt.imshow(grey_a,cmap='gray')
 plt.show()
+
+
 
 # Gaussian filtering
 
@@ -146,95 +148,66 @@ def border_specification(gradient, t_high, t_low):
     return visited_matrix
 
 specified_borders = border_specification(nms_grey_a,t_high,t_low)
-
-def hough_transform(img):
-    diagonal = int(math.sqrt(img.shape[0]**2+img.shape[1]**2))
+plt.imshow(specified_borders, cmap= "grey")
+plt.show()
+def apply_hough_transform(edges):
+    height, width = edges.shape
+    diagonal = int(np.sqrt(height ** 2 + width ** 2))
+    thetas = np.deg2rad(np.arange(-90, 180, 1))
     rhos = np.linspace(0, diagonal, diagonal)
-    thetas = np.deg2rad(np.arange(-90,180,1))
 
-    cummulative = np.zeros((len(rhos), len(thetas)), dtype=np.float32)
+    phase = np.zeros((len(rhos), len(thetas)), dtype=np.float32)
 
-    for x in range(img.shape[0]):
-        for y in range (img.shape[1]):
-            if img[x,y]==255:
-                for id, theta in enumerate(thetas):
-                    rho = int(y*np.cos(theta)+ x* np.sin(theta))
-                    cummulative[rho,id] +=1
+    for i in range(height):
+        for j in range(width):
+            if edges[i, j] > 0:
+                for index, theta in enumerate(thetas):
+                    rho = int(j * np.cos(theta) + i * np.sin(theta))
+                    phase[rho, index] += 1
 
-    return cummulative, rhos,thetas
+    return phase, thetas, rhos
 
-cummulative,rhos,thetas = hough_transform(specified_borders)
 
-print("Please input the size of the kernel for cummulative:")
-kernel_size_input = int(input())
-print("Please input the gaussian standart deviation:")
-gaussian_standart_deviation = float(input())
-print("Please input the threshold for non-maximum suppression:")
-nms_threshold = float(input())
-gaussian_kernel_size = kernel_size_input - (1 - kernel_size_input % 2)
+hough_transform_matrix, thetas, rhos = apply_hough_transform(specified_borders)
 
-# Creating kernel
-kernel = np.zeros((gaussian_kernel_size,gaussian_kernel_size))
-for x in range(0, gaussian_kernel_size):
-    for y in range(0, gaussian_kernel_size):
-        x_from_center = gaussian_kernel_size//2+1-x
-        y_from_center = gaussian_kernel_size // 2 + 1 - y
-        kernel[x,y]=1/(2*math.pi*gaussian_standart_deviation**2)*math.exp(-1*(x_from_center**2+y_from_center**2)/(2*gaussian_standart_deviation**2))
+plt.imshow(hough_transform_matrix,cmap = "grey")
+plt.show()
 
-# Gaussian filtering
-
-bordered_shape = [x + gaussian_kernel_size * 2 for x in cummulative.shape]
-bordered_cummulative = np.full(bordered_shape, 0)
-bordered_cummulative[gaussian_kernel_size:gaussian_kernel_size + cummulative.shape[0], gaussian_kernel_size:gaussian_kernel_size + cummulative.shape[1]] = cummulative
-
-gaussian_blur_cummulative = np.full(cummulative.shape, 0)
-for i in range(gaussian_kernel_size, bordered_cummulative.shape[0] - gaussian_kernel_size):
-    for j in range(gaussian_kernel_size, bordered_cummulative.shape[1] - gaussian_kernel_size):
-        slice_for_kernel = bordered_cummulative[i - gaussian_kernel_size // 2:i + gaussian_kernel_size // 2 + 1, j - gaussian_kernel_size // 2:j + gaussian_kernel_size // 2 + 1]
-        slice_for_kernel = np.multiply(slice_for_kernel,kernel)
-        # print(f"X: {i-gaussian_kernel_size}, Y: {j-gaussian_kernel_size}")
-        gaussian_blur_cummulative[i - gaussian_kernel_size, j - gaussian_kernel_size] = np.sum(slice_for_kernel)
-
-def nms(cummulative, threshold):
-    max_value = np.max(cummulative)
+def suppress_nonmaximum(phase, threshold):
+    max_value = np.max(phase)
     significant_value = int(threshold * max_value)
-    cummulative_height, cummulative_width = cummulative.shape
+    phase_height, phase_width = phase.shape
 
     local_maximum = []
-    for r in range(cummulative_height):
-        for t in range(cummulative_width):
-            if cummulative[r, t] > significant_value:
-                neighborhood = cummulative[max(0, r - 1):min(cummulative.shape[0], r + 2), max(0, t - 1):min(cummulative.shape[1], t + 2)]
-                if cummulative[r, t] == np.max(neighborhood):
-                    local_maximum.append((r, t, cummulative[r, t]))
+    for r in range(phase_height):
+        for t in range(phase_width):
+            if phase[r, t] > significant_value:
+                neighborhood = phase[max(0, r - 1):min(phase.shape[0], r + 2), max(0, t - 1):min(phase.shape[1], t + 2)]
+                if phase[r, t] == np.max(neighborhood):
+                    local_maximum.append((r, t, phase[r, t]))
 
     print(f"Found {len(local_maximum)} lines with threshold {threshold * 100}% from maximum value")
 
     return local_maximum
 
-nms_blurred_cummulative = nms(gaussian_blur_cummulative,nms_threshold)
+print("Enter threshold: \n")
+threshold = float(input())
 
-def draw_lines(img, rhos, thetas, nms_cummulative, accuracy=0.8):
-    height, width, _ = img.shape
-    for r, t, value in nms_cummulative:
+local_maximum = suppress_nonmaximum(hough_transform_matrix,threshold)
+
+def draw_lines(image_array, thetas, rhos, local_maximum, accuracy=0.8):
+    height, width , _= image_array.shape
+
+    for r, t, value in local_maximum:
         theta = thetas[t]
         rho = rhos[r]
 
         for y in range(height):
             for x in range(width):
                 if abs(x * np.cos(theta) + y * np.sin(theta) - rho) < accuracy:
-                    img[y, x] = [0, 0, 255]
+                    image_array[y, x] = [0, 0, 255]
 
-    return img
+    return image_array
 
-a_with_lines = draw_lines(a,rhos,thetas,nms_blurred_cummulative)
-
-fig,axis = plt.subplots(1,3)
-axis[0].imshow(specified_borders,cmap='gray')
-axis[0].set_title("Specified borders (Canny)")
-axis[1].imshow(gaussian_blur_cummulative, cmap='gray')
-axis[1].set_title("Cummulative array")
-axis[2].imshow(a_with_lines)
-axis[2].set_title("Image with found lines")
-
+plt.imshow(draw_lines(a,thetas,rhos,local_maximum),cmap = "grey")
 plt.show()
