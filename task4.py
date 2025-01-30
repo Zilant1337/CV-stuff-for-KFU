@@ -40,19 +40,19 @@ plt.show()
 # Gaussian filtering
 
 bordered_shape = [x + gaussian_kernel_size * 2 for x in grey_a.shape]
-bordered_cummulative = np.full(bordered_shape, 0)
-bordered_cummulative[gaussian_kernel_size:gaussian_kernel_size + grey_a.shape[0], gaussian_kernel_size:gaussian_kernel_size + grey_a.shape[1]] = grey_a
+bordered_hough_transform_matrix = np.full(bordered_shape, 0)
+bordered_hough_transform_matrix[gaussian_kernel_size:gaussian_kernel_size + grey_a.shape[0], gaussian_kernel_size:gaussian_kernel_size + grey_a.shape[1]] = grey_a
 
-gaussian_blur_cummulative = np.full(grey_a.shape, 0)
-for i in range(gaussian_kernel_size, bordered_cummulative.shape[0] - gaussian_kernel_size):
-    for j in range(gaussian_kernel_size, bordered_cummulative.shape[1] - gaussian_kernel_size):
-        slice_for_kernel = bordered_cummulative[i - gaussian_kernel_size // 2:i + gaussian_kernel_size // 2 + 1, j - gaussian_kernel_size // 2:j + gaussian_kernel_size // 2 + 1]
+gaussian_blur_hough_transform_matrix = np.full(grey_a.shape, 0)
+for i in range(gaussian_kernel_size, bordered_hough_transform_matrix.shape[0] - gaussian_kernel_size):
+    for j in range(gaussian_kernel_size, bordered_hough_transform_matrix.shape[1] - gaussian_kernel_size):
+        slice_for_kernel = bordered_hough_transform_matrix[i - gaussian_kernel_size // 2:i + gaussian_kernel_size // 2 + 1, j - gaussian_kernel_size // 2:j + gaussian_kernel_size // 2 + 1]
         slice_for_kernel = np.multiply(slice_for_kernel,kernel)
         # print(f"X: {i-gaussian_kernel_size}, Y: {j-gaussian_kernel_size}")
-        gaussian_blur_cummulative[i - gaussian_kernel_size, j - gaussian_kernel_size] = np.sum(slice_for_kernel)
+        gaussian_blur_hough_transform_matrix[i - gaussian_kernel_size, j - gaussian_kernel_size] = np.sum(slice_for_kernel)
 
 
-plt.imshow(gaussian_blur_cummulative, cmap='gray')
+plt.imshow(gaussian_blur_hough_transform_matrix, cmap='gray')
 plt.show()
 
 # Calculating gradient
@@ -69,12 +69,12 @@ rounded_gradient_directions_radians = np.zeros(grey_a.shape)
 nms_grey_a = np.zeros(grey_a.shape)
 
 bordered_shape = [x + 2 for x in grey_a.shape]
-bordered_cummulative = np.full(bordered_shape, 0)
-bordered_cummulative[1:1 + grey_a.shape[0], 1:1 + grey_a.shape[1]] = grey_a
+bordered_hough_transform_matrix = np.full(bordered_shape, 0)
+bordered_hough_transform_matrix[1:1 + grey_a.shape[0], 1:1 + grey_a.shape[1]] = grey_a
 
-for i in range(1, bordered_cummulative.shape[0] - 1):
-    for j in range(1, bordered_cummulative.shape[1] - 1):
-        slice_for_kernel = bordered_cummulative[i - 1:i + 2, j - 1:j + 2]
+for i in range(1, bordered_hough_transform_matrix.shape[0] - 1):
+    for j in range(1, bordered_hough_transform_matrix.shape[1] - 1):
+        slice_for_kernel = bordered_hough_transform_matrix[i - 1:i + 2, j - 1:j + 2]
         x_gradient = np.sum(np.multiply(x_kernel,slice_for_kernel))
         y_gradient = np.sum(np.multiply(y_kernel,slice_for_kernel))
 
@@ -169,8 +169,23 @@ def apply_hough_transform(edges):
 
 
 hough_transform_matrix, thetas, rhos = apply_hough_transform(specified_borders)
-
 plt.imshow(hough_transform_matrix,cmap = "grey")
+plt.show()
+
+bordered_shape = [x + gaussian_kernel_size * 2 for x in hough_transform_matrix.shape]
+bordered_hough_transform_matrix = np.full(bordered_shape, 0)
+bordered_hough_transform_matrix[gaussian_kernel_size:gaussian_kernel_size + hough_transform_matrix.shape[0], gaussian_kernel_size:gaussian_kernel_size + hough_transform_matrix.shape[1]] = hough_transform_matrix
+
+gaussian_blur_hough_transform_matrix = np.full(hough_transform_matrix.shape, 0)
+for i in range(gaussian_kernel_size, bordered_hough_transform_matrix.shape[0] - gaussian_kernel_size):
+    for j in range(gaussian_kernel_size, bordered_hough_transform_matrix.shape[1] - gaussian_kernel_size):
+        slice_for_kernel = bordered_hough_transform_matrix[i - gaussian_kernel_size // 2:i + gaussian_kernel_size // 2 + 1, j - gaussian_kernel_size // 2:j + gaussian_kernel_size // 2 + 1]
+        slice_for_kernel = np.multiply(slice_for_kernel,kernel)
+        # print(f"X: {i-gaussian_kernel_size}, Y: {j-gaussian_kernel_size}")
+        gaussian_blur_hough_transform_matrix[i - gaussian_kernel_size, j - gaussian_kernel_size] = np.sum(slice_for_kernel)
+
+
+plt.imshow(gaussian_blur_hough_transform_matrix,cmap = "grey")
 plt.show()
 
 def suppress_nonmaximum(phase, threshold):
@@ -193,7 +208,7 @@ def suppress_nonmaximum(phase, threshold):
 print("Enter threshold: \n")
 threshold = float(input())
 
-local_maximum = suppress_nonmaximum(hough_transform_matrix,threshold)
+local_maximum = suppress_nonmaximum(gaussian_blur_hough_transform_matrix,threshold)
 
 def draw_lines(image_array, thetas, rhos, local_maximum, accuracy=0.8):
     height, width , _= image_array.shape
